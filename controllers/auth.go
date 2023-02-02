@@ -70,3 +70,78 @@ func (ac authController) Signup(c *gin.Context) {
 
 	utils.Response(c, http.StatusCreated, userModel, "User Signup Successful")
 }
+
+// Login a user - with Gin Basic Auth
+func (ac authController) Login(c *gin.Context) {
+	// Bind the request body to the LoginSchema
+	var loginSchema schema.LoginSchema
+	if err := c.ShouldBindJSON(&loginSchema); err != nil {
+		utils.Response(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	// Declare a user model
+	var userModel models.User
+
+	// Check if the user already exists
+	userIns := ac.db.Where("email = ?", loginSchema.Email).First(&userModel)
+	log.Println(userIns)
+	if userIns.RowsAffected == 0 {
+		utils.Response(c, http.StatusNotFound, nil, "User not found")
+		return
+	}
+
+	// Check if the user is verified
+	if !userModel.IsActive {
+		utils.Response(c, http.StatusUnauthorized, nil, "User is not verified, Please verify your email")
+		return
+	}
+
+	// Validate the Password
+	err := bcrypt.CompareHashAndPassword([]byte(userModel.Password), []byte(loginSchema.Password))
+	if err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Incorrect Password")
+		return
+	}
+
+	// Generate a Basic Auth token
+	token := utils.GenerateBasicAuthToken(userModel.Email)
+
+	res := map[string]any{
+		"token": token,
+	}
+
+	// Return the user
+	utils.Response(c, http.StatusOK, res, "User Login Successful")
+}
+
+// Verify a user
+func (ac authController) Verify(c *gin.Context) {
+	// Get the token from the request
+	email := c.Param("email")
+
+	// Declare a user model
+	var userModel models.User
+
+	// Check if the user already exists
+	userIns := ac.db.Where("email = ?", email).First(&userModel)
+	if userIns.RowsAffected == 0 {
+		utils.Response(c, http.StatusNotFound, nil, "User not found")
+		return
+	}
+
+	// Check if the user is already verified
+	if userModel.IsActive {
+		utils.Response(c, http.StatusConflict, nil, "User is already verified")
+		return
+	}
+
+	// Activate the user
+	userModel.IsActive = true
+	if err := ac.db.Save(&userModel).Error; err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error activating user")
+		return
+	}
+
+	utils.Response(c, http.StatusOK, userModel, "User activated successfully")
+}

@@ -9,4 +9,6 @@ func authRoutes(e *gin.Engine) {
 	authApi := controllers.NewAuthController()
 
 	e.POST("/auth/signup", authApi.Signup)
+	e.POST("/auth/login", authApi.Login)
+	e.PATCH("/auth/verify/:email", authApi.Verify)
 }
