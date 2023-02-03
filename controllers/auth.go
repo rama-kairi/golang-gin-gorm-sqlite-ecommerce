@@ -105,14 +105,14 @@ func (ac authController) Login(c *gin.Context) {
 	}
 
 	// Generate a Basic Auth token
-	token := utils.GenerateBasicAuthToken(userModel.Email)
-
-	res := map[string]any{
-		"token": token,
+	accessToken, err := utils.GenerateJWTToken(userModel.Email, utils.TokenTypeAccess)
+	if err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
+		return
 	}
 
 	// Return the user
-	utils.Response(c, http.StatusOK, res, "User Login Successful")
+	utils.Response(c, http.StatusOK, accessToken, "User Login Successful")
 }
 
 // Verify a user

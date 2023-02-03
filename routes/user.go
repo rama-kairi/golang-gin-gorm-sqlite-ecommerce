@@ -7,13 +7,14 @@ import (
 )
 
 func userRoutes(e *gin.Engine) {
-	e.Use(middleware.AuthMiddleware())
-
 	userApi := controllers.NewUserController()
 
-	e.GET("/user", userApi.GetAll)
-	e.POST("/user", userApi.Create)
-	e.GET("/user/:id", userApi.Get)
-	e.DELETE("/user/:id", userApi.Delete)
-	e.PATCH("/user/:id", userApi.Update)
+	userGroup := e.Group("/user", middleware.AuthMiddleware())
+	{
+		userGroup.GET("", userApi.GetAll)
+		userGroup.POST("", userApi.Create)
+		userGroup.GET("/:id", userApi.Get)
+		userGroup.DELETE("/:id", userApi.Delete)
+		userGroup.PATCH("/:id", userApi.Update)
+	}
 }
