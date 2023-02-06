@@ -13,11 +13,23 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the token from the header
-		tokenStr := utils.ParseToken(c)
+		token, err := utils.ParseToken(c)
+		if err != nil {
+			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+			c.Abort()
+			return
+		}
 
 		// get the email from the token
-		claims, err := utils.VerifyJWTToken(tokenStr)
+		email, tokenType, err := utils.VerifyJWTToken(token)
 		if err != nil {
+			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+			c.Abort()
+			return
+		}
+
+		// Check if the token is an access token
+		if tokenType != "access" {
 			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
 			c.Abort()
 			return
@@ -25,7 +37,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Get the user from the database
 		var user models.User
-		if err := db.Db.Where("email = ?", claims.Subject).First(&user).Error; err != nil {
+		if err := db.Db.Where("email = ?", email).First(&user).Error; err != nil {
 			// If the user is not found, return 404
 			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
 			c.Abort()

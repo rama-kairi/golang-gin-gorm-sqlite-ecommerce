@@ -8,7 +8,12 @@ import (
 func authRoutes(e *gin.Engine) {
 	authApi := controllers.NewAuthController()
 
-	e.POST("/auth/signup", authApi.Signup)
-	e.POST("/auth/login", authApi.Login)
-	e.PATCH("/auth/verify/:email", authApi.Verify)
+	auth := e.Group("/auth")
+	{
+		auth.POST("/signup", authApi.Signup)
+		auth.POST("/login", authApi.Login)
+		auth.PATCH("/verify/:email", authApi.Verify)
+		auth.PATCH("/forgot-password/:email", authApi.ForgotPassword)
+		auth.PATCH("/reset-password/:token", authApi.ResetPassword)
+	}
 }

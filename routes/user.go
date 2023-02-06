@@ -8,7 +8,6 @@ import (
 
 func userRoutes(e *gin.Engine) {
 	userApi := controllers.NewUserController()
-
 	userGroup := e.Group("/user", middleware.AuthMiddleware())
 	{
 		userGroup.GET("", userApi.GetAll)
