@@ -15,3 +15,8 @@ type LoginSchema struct {
 type ResetPasswordSchema struct {
 	Password string `json:"password" binding:"required"`
 }
+
+type ChangePasswordSchema struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+}

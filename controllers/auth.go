@@ -60,14 +60,20 @@ func (ac authController) Signup(c *gin.Context) {
 	userModel.FirstName = signupSchema.FirstName
 	userModel.LastName = signupSchema.LastName
 
-	// TODO: Send the user a verification email
-	log.Println("Sending verification email to: ", signupSchema.Email)
-
 	// Create the user
 	if err := ac.db.Create(&userModel).Error; err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error creating user")
 		return
 	}
+	// Generate a verification token
+	token, err := utils.GenerateJWTToken(userModel.Email, utils.TokenTypeVerify)
+	if err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
+		return
+	}
+
+	// TODO: Send the user a verification email
+	log.Println("Sending verification email to: ", token)
 
 	utils.Response(c, http.StatusCreated, userModel, "User Signup Successful")
 }
@@ -88,7 +94,7 @@ func (ac authController) Login(c *gin.Context) {
 	userIns := ac.db.Where("email = ?", loginSchema.Email).First(&userModel)
 	log.Println(userIns)
 	if userIns.RowsAffected == 0 {
-		utils.Response(c, http.StatusNotFound, nil, "User not found")
+		utils.Response(c, http.StatusUnauthorized, nil, "Invalid Credentials")
 		return
 	}
 
@@ -101,7 +107,7 @@ func (ac authController) Login(c *gin.Context) {
 	// Validate the Password
 	err := bcrypt.CompareHashAndPassword([]byte(userModel.Password), []byte(loginSchema.Password))
 	if err != nil {
-		utils.Response(c, http.StatusUnauthorized, nil, "Incorrect Password")
+		utils.Response(c, http.StatusUnauthorized, nil, "Invalid Credentials")
 		return
 	}
 
@@ -119,7 +125,20 @@ func (ac authController) Login(c *gin.Context) {
 // Verify a user
 func (ac authController) Verify(c *gin.Context) {
 	// Get the token from the request
-	email := c.Param("email")
+	token := c.Param("token")
+
+	// Verify the token
+	email, tokenType, err := utils.VerifyJWTToken(token)
+	if err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Invalid Token")
+		return
+	}
+
+	// Check if the token is of type verification
+	if err := utils.CheckTokenType(tokenType, utils.TokenTypeVerify); err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, err.Error())
+		return
+	}
 
 	// Declare a user model
 	var userModel models.User
@@ -165,6 +184,7 @@ func (ac authController) ForgotPassword(c *gin.Context) {
 	// Check if the user is verified
 	if !userModel.IsActive {
 		utils.Response(c, http.StatusUnauthorized, nil, "User is not verified, Please verify your email")
+		// TODO: Send the user a verification email
 		return
 	}
 
@@ -175,13 +195,10 @@ func (ac authController) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	fmt.Println()
-	fmt.Println(resetToken)
-	fmt.Println()
-
 	resetURL := fmt.Sprintf("http://localhost:8080/reset-password/%s", resetToken)
 
 	// Send the user a reset password email
+	// TODO: Send the user a reset password email
 	log.Println("Sending reset password email to: ", email)
 	log.Println("Reset URL: ", resetURL)
 
@@ -229,7 +246,7 @@ func (ac authController) ResetPassword(c *gin.Context) {
 	}
 
 	// Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userModel.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(resetPass.Password), bcrypt.DefaultCost)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error creating user")
 		return
@@ -243,4 +260,73 @@ func (ac authController) ResetPassword(c *gin.Context) {
 	}
 
 	utils.Response(c, http.StatusOK, userModel, "User password reset successful")
+}
+
+// Change Password
+func (ac authController) ChangePassword(c *gin.Context) {
+	// Get the token from the header
+	token, err := utils.ParseToken(c)
+	if err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+		log.Println(err)
+		c.Abort()
+		return
+	}
+
+	// get the email from the token
+	email, tokenType, err := utils.VerifyJWTToken(token)
+	if err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+		log.Println(err)
+		c.Abort()
+		return
+	}
+
+	// Check if the token is a Access token
+	if err := utils.CheckTokenType(tokenType, utils.TokenTypeAccess); err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+		log.Println(err)
+		return
+	}
+
+	// Get the password from the request
+	changePass := schema.ChangePasswordSchema{}
+	if err := c.ShouldBindJSON(&changePass); err != nil {
+		utils.Response(c, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	// Check if the old password is correct
+	var user models.User
+	if err := ac.db.Where("email = ?", email).First(&user).Error; err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error getting user")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(changePass.CurrentPassword)); err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Invalid password")
+		return
+	}
+
+	// Validate the Password
+	if len(changePass.NewPassword) < 6 {
+		utils.Response(c, http.StatusBadRequest, nil, "Password must be at least 6 characters")
+		return
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(changePass.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error creating user")
+		return
+	}
+
+	// Update the user
+	user.Password = string(hashedPassword)
+	if err := ac.db.Save(&user).Error; err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error creating user")
+		return
+	}
+
+	utils.Response(c, http.StatusOK, user, "User password changed successfully")
 }

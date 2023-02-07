@@ -12,8 +12,9 @@ func authRoutes(e *gin.Engine) {
 	{
 		auth.POST("/signup", authApi.Signup)
 		auth.POST("/login", authApi.Login)
-		auth.PATCH("/verify/:email", authApi.Verify)
+		auth.PATCH("/verify/:token", authApi.Verify)
 		auth.PATCH("/forgot-password/:email", authApi.ForgotPassword)
 		auth.PATCH("/reset-password/:token", authApi.ResetPassword)
+		auth.PATCH("/change-password", authApi.ChangePassword)
 	}
 }

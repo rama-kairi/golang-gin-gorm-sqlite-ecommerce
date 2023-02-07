@@ -15,6 +15,7 @@ const (
 	TokenTypeAccess  TokenType = "access"
 	TokenTypeRefresh TokenType = "refresh"
 	TokenTypeReset   TokenType = "reset"
+	TokenTypeVerify  TokenType = "verification"
 )
 
 var secret = []byte("5eb65440d4d739befe9a0c832c4b39aa10d74748aad00789002e224d45d980b3")
@@ -26,9 +27,10 @@ type tokenResponse struct {
 }
 
 var expireMap = map[TokenType]time.Time{
-	TokenTypeAccess:  time.Now().Add(1 * time.Minute),
+	TokenTypeAccess:  time.Now().Add(15 * time.Minute),
 	TokenTypeRefresh: time.Now().Add(24 * time.Hour),
 	TokenTypeReset:   time.Now().Add(1 * time.Hour),
+	TokenTypeVerify:  time.Now().Add(1 * time.Hour),
 }
 
 type TokenClaims struct {
@@ -88,13 +90,8 @@ func VerifyJWTToken(tokenString string) (string, string, error) {
 func ParseToken(c *gin.Context) (string, error) {
 	tokenArr := strings.Split(c.GetHeader("Authorization"), " ")
 	// Check if the length of the tokenArr is 2
-	if len(tokenArr) != 2 {
+	if len(tokenArr) != 2 && tokenArr[0] != "Bearer" {
 		return "", fmt.Errorf("invalid token")
-	}
-
-	// Check if the token type is Bearer
-	if tokenArr[0] != "Bearer" {
-		return "", fmt.Errorf("invalid token type")
 	}
 
 	return tokenArr[1], nil
