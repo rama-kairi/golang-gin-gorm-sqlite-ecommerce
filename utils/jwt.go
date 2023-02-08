@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ const (
 	TokenTypeVerify  TokenType = "verification"
 )
 
-var secret = []byte("5eb65440d4d739befe9a0c832c4b39aa10d74748aad00789002e224d45d980b3")
+var secret = []byte(os.Getenv("JWT_SECRET"))
 
 type tokenResponse struct {
 	Token     string    `json:"token"`
