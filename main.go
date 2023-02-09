@@ -15,6 +15,7 @@ func main() {
 
 	// Auto migrate the models
 	// db.Db.AutoMigrate(&models.User{})
+	// Implement the routes
 
 	r := routes.InitRoutes()
 
