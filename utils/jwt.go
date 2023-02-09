@@ -2,12 +2,12 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/spf13/viper"
 )
 
 type TokenType string
@@ -19,7 +19,7 @@ const (
 	TokenTypeVerify  TokenType = "verification"
 )
 
-var secret = []byte(os.Getenv("JWT_SECRET"))
+var secret = []byte(viper.GetString("JWT_SECRET"))
 
 type tokenResponse struct {
 	Token     string    `json:"token"`

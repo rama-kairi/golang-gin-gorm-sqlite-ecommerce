@@ -1,16 +1,15 @@
 package main
 
 import (
-	"os"
-
 	"github.com/rama-kairi/blog-api-golang-gin/config"
 	"github.com/rama-kairi/blog-api-golang-gin/db"
 	"github.com/rama-kairi/blog-api-golang-gin/models"
 	"github.com/rama-kairi/blog-api-golang-gin/routes"
+	"github.com/spf13/viper"
 )
 
 func main() {
-	config.InitConfig()
+	config.InitViperConfig()
 
 	db.InitGormDb()
 
@@ -19,5 +18,5 @@ func main() {
 
 	r := routes.InitRoutes()
 
-	r.Run(":" + os.Getenv("APP_PORT"))
+	r.Run(":" + viper.GetString("APP_PORT"))
 }

@@ -1,14 +1,24 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
-var configPath = ".env.dev"
+// func InitConfig() {
+// 	// load .env file
+// 	err := godotenv.Load(".env.dev")
+// 	if err != nil {
+// 		panic("Error loading .env file")
+// 	}
+// }
 
-func InitConfig() {
-	// load .env file
-	err := godotenv.Load(configPath)
+func InitViperConfig() {
+	viper.AutomaticEnv()
+	viper.AddConfigPath(".")
+	viper.SetConfigType("env")
+	viper.SetConfigName(".env.dev")
+
+	err := viper.ReadInConfig()
 	if err != nil {
 		panic("Error loading .env file")
 	}
