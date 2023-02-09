@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/rama-kairi/blog-api-golang-gin/config"
 	"github.com/rama-kairi/blog-api-golang-gin/db"
-	"github.com/rama-kairi/blog-api-golang-gin/models"
 	"github.com/rama-kairi/blog-api-golang-gin/routes"
 	"github.com/spf13/viper"
 )
@@ -11,10 +10,12 @@ import (
 func main() {
 	config.InitViperConfig()
 
-	db.InitGormDb()
+	// db.InitGormDb()
+	db.InitEntDb()
 
 	// Auto migrate the models
-	db.Db.AutoMigrate(&models.User{})
+	// db.Db.AutoMigrate(&models.User{})
+	// Implement the routes
 
 	r := routes.InitRoutes()
 
