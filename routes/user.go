@@ -3,12 +3,14 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/rama-kairi/blog-api-golang-gin/controllers"
-	"github.com/rama-kairi/blog-api-golang-gin/middleware"
+	"github.com/rama-kairi/blog-api-golang-gin/db"
 )
 
 func userRoutes(e *gin.Engine) {
-	userApi := controllers.NewUserController()
-	userGroup := e.Group("/user", middleware.AuthMiddleware())
+	entClient := db.InitEntDb()
+	userApi := controllers.NewUserController(entClient)
+
+	userGroup := e.Group("/user")
 	{
 		userGroup.GET("", userApi.GetAll)
 		userGroup.POST("", userApi.Create)

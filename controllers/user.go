@@ -1,35 +1,40 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rama-kairi/blog-api-golang-gin/db"
+	"github.com/rama-kairi/blog-api-golang-gin/ent"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 	"github.com/rama-kairi/blog-api-golang-gin/models"
 	"github.com/rama-kairi/blog-api-golang-gin/utils"
-
-	"gorm.io/gorm"
 )
 
 type userController struct {
-	db *gorm.DB
+	db *ent.Client
 }
 
-func NewUserController() *userController {
+func NewUserController(db *ent.Client) *userController {
 	return &userController{
-		db: db.Db,
+		db: db,
 	}
 }
 
 // Get all Users
 func (u userController) GetAll(c *gin.Context) {
-	var users []models.User
-	// Get all users from the database
-	u.db.Find(&users)
+	ctx := context.Background()
 
-	utils.Response(c, http.StatusOK, users, "users found")
+	userRes, err := u.db.User.Query().All(ctx)
+	if err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error getting users")
+		return
+	}
+
+	utils.Response(c, http.StatusOK, userRes, "Users found")
 }
 
 // Get a user
@@ -42,11 +47,13 @@ func (u userController) Get(c *gin.Context) {
 	}
 
 	// Get the user from the database
-	var user models.User
-	if err := u.db.First(&user, id).Error; err != nil {
-		// If the user is not found, return 404
-		utils.Response(c, http.StatusNotFound, nil, "user not found")
-		return
+	user, err := u.db.User.Query().Where(user.ID(id)).Only(context.Background())
+	if err != nil {
+		if ent.IsNotFound(err) {
+			utils.Response(c, http.StatusNotFound, nil, "User not found")
+			return
+		}
+		utils.Response(c, http.StatusInternalServerError, nil, "Error getting user")
 	}
 
 	utils.Response(c, http.StatusNotFound, user, "user found")
@@ -54,16 +61,22 @@ func (u userController) Get(c *gin.Context) {
 
 // Create a User
 func (u userController) Create(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	var userSchema ent.User
+	if err := c.ShouldBindJSON(&userSchema); err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error creating user")
 		return
 	}
 
 	// Create the user in the database
-	if err := u.db.Create(&user).Error; err != nil {
-		if err.Error() == "UNIQUE constraint failed: users.email" {
-			utils.Response(c, http.StatusBadRequest, nil, "Email already exists")
+	user, err := u.db.User.Create().
+		SetFirstName(userSchema.FirstName).
+		SetLastName(userSchema.LastName).
+		SetEmail(userSchema.Email).
+		SetPassword(userSchema.Password).
+		Save(context.Background())
+	if err != nil {
+		if ent.IsConstraintError(err) && strings.Contains(err.Error(), "email") {
+			utils.Response(c, http.StatusConflict, nil, "Email already exists")
 			return
 		}
 		utils.Response(c, http.StatusInternalServerError, nil, "Error creating user")
@@ -82,16 +95,15 @@ func (u userController) Delete(c *gin.Context) {
 		utils.Response(c, http.StatusBadRequest, nil, "Error getting user")
 		return
 	}
+
 	// Delete the user from the database
-	if err := u.db.Delete(&models.User{}, id).Error; err != nil {
+	err = u.db.User.DeleteOneID(id).Exec(context.Background())
+	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error deleting user")
 		return
 	}
 
-	if err != nil {
-		// If the user is not found, return 404
-		utils.Response(c, http.StatusNoContent, nil, "user Deleted")
-	}
+	utils.Response(c, http.StatusOK, nil, "user deleted successfully")
 }
 
 // Update a user
@@ -110,7 +122,14 @@ func (u userController) Update(c *gin.Context) {
 	}
 
 	// Update the user in the database
-	if err := u.db.Model(&models.User{}).Where("id = ?", id).Updates(user).Error; err != nil {
+	_, err = u.db.User.UpdateOneID(id).
+		SetFirstName(user.FirstName).
+		SetLastName(user.LastName).
+		SetEmail(user.Email).
+		SetPassword(user.Password).
+		Save(context.Background())
+
+	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error updating user")
 		return
 	}
