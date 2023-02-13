@@ -10,11 +10,7 @@ import (
 func main() {
 	config.InitViperConfig()
 
-	// db.InitGormDb()
 	db.InitEntDb()
-
-	// Auto migrate the models
-	// db.Db.AutoMigrate(&models.User{})
 
 	r := routes.InitRoutes()
 

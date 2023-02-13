@@ -5,8 +5,9 @@ import "github.com/gin-gonic/gin"
 func InitRoutes() *gin.Engine {
 	r := gin.Default()
 
-	userRoutes(r) // routes/user.go
-	authRoutes(r) // routes/auth.go
+	userRoutes(r)    // routes/user.go
+	authRoutes(r)    // routes/auth.go
+	productRoutes(r) // routes/product.go
 
 	return r
 }
