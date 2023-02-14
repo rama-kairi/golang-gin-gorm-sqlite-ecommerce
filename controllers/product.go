@@ -3,11 +3,13 @@ package controllers
 import (
 	"context"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rama-kairi/blog-api-golang-gin/ent"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/product"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 	"github.com/rama-kairi/blog-api-golang-gin/utils"
 )
 
@@ -25,7 +27,7 @@ func NewProductController(db *ent.Client) *productController {
 func (p productController) GetAll(c *gin.Context) {
 	ctx := context.Background()
 
-	productRes, err := p.db.Product.Query().All(ctx)
+	productRes, err := p.db.Product.Query().WithUser().All(ctx)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error getting products")
 		return
@@ -38,7 +40,7 @@ func (p productController) GetAll(c *gin.Context) {
 func (p productController) Get(c *gin.Context) {
 	ctx := context.Background()
 	// Get product id from url
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error Parsing the product id")
 		return
@@ -70,8 +72,18 @@ func (p productController) Create(c *gin.Context) {
 		SetPrice(productSchema.Price).
 		SetDescription(productSchema.Description).
 		SetName(productSchema.Name).
+		SetUserID(productSchema.UserID).
 		Save(ctx)
 	if err != nil {
+		if strings.Contains(err.Error(), "missing required field \"Product.user_id\"") {
+			utils.Response(c, http.StatusBadRequest, nil, "`user_id` Required")
+			return
+		}
+		if ent.IsConstraintError(err) {
+			utils.Response(c, http.StatusBadRequest, nil, "Invalid user_id")
+			return
+		}
+
 		utils.Response(c, http.StatusInternalServerError, nil, "Error creating product")
 		return
 	}
@@ -83,7 +95,7 @@ func (p productController) Create(c *gin.Context) {
 func (p productController) Update(c *gin.Context) {
 	ctx := context.Background()
 	// Get product id from url
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error Parsing the product id")
 		return
@@ -119,7 +131,7 @@ func (p productController) Update(c *gin.Context) {
 func (p productController) Delete(c *gin.Context) {
 	ctx := context.Background()
 	// Get product id from url
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error Parsing the product id")
 		return
@@ -132,4 +144,27 @@ func (p productController) Delete(c *gin.Context) {
 	}
 
 	utils.Response(c, http.StatusOK, nil, "Product deleted")
+}
+
+// Get All Products by user
+func (p productController) GetAllByUser(c *gin.Context) {
+	ctx := context.Background()
+	// Get user id from url
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		utils.Response(c, http.StatusBadRequest, nil, "Error Parsing the user id")
+		return
+	}
+
+	productRes, err := p.db.Product.Query().
+		Where(product.HasUserWith(
+			user.ID(id),
+		)).
+		All(ctx)
+	if err != nil {
+		utils.Response(c, http.StatusInternalServerError, nil, "Error getting products")
+		return
+	}
+
+	utils.Response(c, http.StatusOK, productRes, "Products found")
 }

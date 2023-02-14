@@ -17,5 +17,6 @@ func productRoutes(e *gin.Engine) {
 		productGroup.GET("/:id", productApi.Get)
 		productGroup.DELETE("/:id", productApi.Delete)
 		productGroup.PATCH("/:id", productApi.Update)
+		productGroup.GET("/user/:id", productApi.GetAllByUser)
 	}
 }

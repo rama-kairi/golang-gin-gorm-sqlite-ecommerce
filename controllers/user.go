@@ -3,10 +3,10 @@ package controllers
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rama-kairi/blog-api-golang-gin/ent"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
@@ -40,7 +40,7 @@ func (u userController) GetAll(c *gin.Context) {
 // Get a user
 func (u userController) Get(c *gin.Context) {
 	// Get user id from url
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error getting user")
 		return
@@ -90,7 +90,7 @@ func (u userController) Create(c *gin.Context) {
 // Delete a user
 func (u userController) Delete(c *gin.Context) {
 	// Get user id from url
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error getting user")
 		return
@@ -109,7 +109,7 @@ func (u userController) Delete(c *gin.Context) {
 // Update a user
 func (u userController) Update(c *gin.Context) {
 	// Get user id from url
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error getting user")
 		return
