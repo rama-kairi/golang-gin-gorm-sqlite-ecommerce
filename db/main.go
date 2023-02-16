@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 
+	"entgo.io/ent/dialect"
+	_ "github.com/lib/pq"
 	"github.com/rama-kairi/blog-api-golang-gin/ent"
 	"github.com/spf13/viper"
 	"gorm.io/driver/sqlite"
@@ -25,9 +27,10 @@ func InitGormDb() {
 // Ent Orm -
 // https://entgo.io/docs/getting-started/
 func InitEntDb() *ent.Client {
-	client, err := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	dsn := "host=localhost user=postgres password=postgres dbname=ecomm port=5432 sslmode=disable"
+	client, err := ent.Open(dialect.Postgres, dsn)
 	if err != nil {
-		log.Fatalf("failed opening connection to sqlite: %v", err)
+		log.Fatalf("failed opening connection to postgres: %v", err)
 	}
 
 	// Run the auto migration tool.

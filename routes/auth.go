@@ -13,10 +13,11 @@ func authRoutes(e *gin.Engine) {
 	auth := e.Group("/auth")
 	{
 		auth.POST("/signup", authApi.Signup)
-		// auth.POST("/login", authApi.Login)
-		// auth.PATCH("/verify/:token", authApi.Verify)
-		// auth.PATCH("/forgot-password/:email", authApi.ForgotPassword)
-		// auth.PATCH("/reset-password/:token", authApi.ResetPassword)
-		// auth.PATCH("/change-password", authApi.ChangePassword)
+		auth.POST("/login", authApi.Login)
+		auth.PATCH("/verify/:token", authApi.Verify)
+		auth.PATCH("/forgot-password/:email", authApi.ForgotPassword)
+		auth.PATCH("/reset-password/:token", authApi.ResetPassword)
+		auth.PATCH("/change-password", authApi.ChangePassword)
+		auth.PATCH("/refresh", authApi.RefreshToken)
 	}
 }

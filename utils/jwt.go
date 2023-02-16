@@ -7,31 +7,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/rama-kairi/blog-api-golang-gin/schema"
 	"github.com/spf13/viper"
-)
-
-type TokenType string
-
-const (
-	TokenTypeAccess  TokenType = "access"
-	TokenTypeRefresh TokenType = "refresh"
-	TokenTypeReset   TokenType = "reset"
-	TokenTypeVerify  TokenType = "verification"
 )
 
 var secret = []byte(viper.GetString("JWT_SECRET"))
 
-type tokenResponse struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Type      TokenType `json:"type"`
-}
-
-var expireMap = map[TokenType]time.Time{
-	TokenTypeAccess:  time.Now().Add(15 * time.Minute),
-	TokenTypeRefresh: time.Now().Add(24 * time.Hour),
-	TokenTypeReset:   time.Now().Add(1 * time.Hour),
-	TokenTypeVerify:  time.Now().Add(1 * time.Hour),
+var expireMap = map[schema.TokenType]time.Time{
+	schema.TokenTypeAccess:  time.Now().Add(15 * time.Minute),
+	schema.TokenTypeRefresh: time.Now().Add(24 * time.Hour),
+	schema.TokenTypeReset:   time.Now().Add(1 * time.Hour),
+	schema.TokenTypeVerify:  time.Now().Add(1 * time.Hour),
 }
 
 type TokenClaims struct {
@@ -40,7 +26,7 @@ type TokenClaims struct {
 }
 
 // GenerateJWTToken - generates a JWT token
-func GenerateJWTToken(email string, tokenType TokenType) (tokenResponse, error) {
+func GenerateJWTToken(email string, tokenType schema.TokenType) (schema.SingleTokenResponse, error) {
 	// Create the Claims
 	claims := &TokenClaims{
 		Type: string(tokenType),
@@ -55,10 +41,10 @@ func GenerateJWTToken(email string, tokenType TokenType) (tokenResponse, error) 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		return tokenResponse{}, err
+		return schema.SingleTokenResponse{}, err
 	}
 
-	return tokenResponse{
+	return schema.SingleTokenResponse{
 		Token:     tokenString,
 		ExpiresAt: expireMap[tokenType],
 		Type:      tokenType,
@@ -99,7 +85,7 @@ func ParseToken(c *gin.Context) (string, error) {
 }
 
 // CheckTokenType - checks if the token type is valid
-func CheckTokenType(tokenTypeStr string, tokenType TokenType) error {
+func CheckTokenType(tokenTypeStr string, tokenType schema.TokenType) error {
 	if tokenTypeStr != string(tokenType) {
 		return fmt.Errorf("invalid token type")
 	}
