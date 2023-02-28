@@ -11,19 +11,23 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/category"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/predicate"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/product"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/subcategory"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 )
 
 // ProductQuery is the builder for querying Product entities.
 type ProductQuery struct {
 	config
-	ctx        *QueryContext
-	order      []OrderFunc
-	inters     []Interceptor
-	predicates []predicate.Product
-	withUser   *UserQuery
+	ctx             *QueryContext
+	order           []OrderFunc
+	inters          []Interceptor
+	predicates      []predicate.Product
+	withUser        *UserQuery
+	withCategory    *CategoryQuery
+	withSubCategory *SubCategoryQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -75,6 +79,50 @@ func (pq *ProductQuery) QueryUser() *UserQuery {
 			sqlgraph.From(product.Table, product.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, product.UserTable, product.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCategory chains the current query on the "category" edge.
+func (pq *ProductQuery) QueryCategory() *CategoryQuery {
+	query := (&CategoryClient{config: pq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(product.Table, product.FieldID, selector),
+			sqlgraph.To(category.Table, category.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, product.CategoryTable, product.CategoryColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QuerySubCategory chains the current query on the "sub_category" edge.
+func (pq *ProductQuery) QuerySubCategory() *SubCategoryQuery {
+	query := (&SubCategoryClient{config: pq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(product.Table, product.FieldID, selector),
+			sqlgraph.To(subcategory.Table, subcategory.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, product.SubCategoryTable, product.SubCategoryColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
 		return fromU, nil
@@ -267,12 +315,14 @@ func (pq *ProductQuery) Clone() *ProductQuery {
 		return nil
 	}
 	return &ProductQuery{
-		config:     pq.config,
-		ctx:        pq.ctx.Clone(),
-		order:      append([]OrderFunc{}, pq.order...),
-		inters:     append([]Interceptor{}, pq.inters...),
-		predicates: append([]predicate.Product{}, pq.predicates...),
-		withUser:   pq.withUser.Clone(),
+		config:          pq.config,
+		ctx:             pq.ctx.Clone(),
+		order:           append([]OrderFunc{}, pq.order...),
+		inters:          append([]Interceptor{}, pq.inters...),
+		predicates:      append([]predicate.Product{}, pq.predicates...),
+		withUser:        pq.withUser.Clone(),
+		withCategory:    pq.withCategory.Clone(),
+		withSubCategory: pq.withSubCategory.Clone(),
 		// clone intermediate query.
 		sql:  pq.sql.Clone(),
 		path: pq.path,
@@ -287,6 +337,28 @@ func (pq *ProductQuery) WithUser(opts ...func(*UserQuery)) *ProductQuery {
 		opt(query)
 	}
 	pq.withUser = query
+	return pq
+}
+
+// WithCategory tells the query-builder to eager-load the nodes that are connected to
+// the "category" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *ProductQuery) WithCategory(opts ...func(*CategoryQuery)) *ProductQuery {
+	query := (&CategoryClient{config: pq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withCategory = query
+	return pq
+}
+
+// WithSubCategory tells the query-builder to eager-load the nodes that are connected to
+// the "sub_category" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *ProductQuery) WithSubCategory(opts ...func(*SubCategoryQuery)) *ProductQuery {
+	query := (&SubCategoryClient{config: pq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withSubCategory = query
 	return pq
 }
 
@@ -368,8 +440,10 @@ func (pq *ProductQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Prod
 	var (
 		nodes       = []*Product{}
 		_spec       = pq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [3]bool{
 			pq.withUser != nil,
+			pq.withCategory != nil,
+			pq.withSubCategory != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -393,6 +467,18 @@ func (pq *ProductQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Prod
 	if query := pq.withUser; query != nil {
 		if err := pq.loadUser(ctx, query, nodes, nil,
 			func(n *Product, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := pq.withCategory; query != nil {
+		if err := pq.loadCategory(ctx, query, nodes, nil,
+			func(n *Product, e *Category) { n.Edges.Category = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := pq.withSubCategory; query != nil {
+		if err := pq.loadSubCategory(ctx, query, nodes, nil,
+			func(n *Product, e *SubCategory) { n.Edges.SubCategory = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -421,6 +507,64 @@ func (pq *ProductQuery) loadUser(ctx context.Context, query *UserQuery, nodes []
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (pq *ProductQuery) loadCategory(ctx context.Context, query *CategoryQuery, nodes []*Product, init func(*Product), assign func(*Product, *Category)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Product)
+	for i := range nodes {
+		fk := nodes[i].CategoryID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(category.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "category_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (pq *ProductQuery) loadSubCategory(ctx context.Context, query *SubCategoryQuery, nodes []*Product, init func(*Product), assign func(*Product, *SubCategory)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Product)
+	for i := range nodes {
+		fk := nodes[i].SubCategoryID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(subcategory.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "sub_category_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

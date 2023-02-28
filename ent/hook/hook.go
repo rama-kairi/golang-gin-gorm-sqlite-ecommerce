@@ -9,6 +9,18 @@ import (
 	"github.com/rama-kairi/blog-api-golang-gin/ent"
 )
 
+// The CategoryFunc type is an adapter to allow the use of ordinary
+// function as Category mutator.
+type CategoryFunc func(context.Context, *ent.CategoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CategoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CategoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CategoryMutation", m)
+}
+
 // The ProductFunc type is an adapter to allow the use of ordinary
 // function as Product mutator.
 type ProductFunc func(context.Context, *ent.ProductMutation) (ent.Value, error)
@@ -19,6 +31,18 @@ func (f ProductFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductMutation", m)
+}
+
+// The SubCategoryFunc type is an adapter to allow the use of ordinary
+// function as SubCategory mutator.
+type SubCategoryFunc func(context.Context, *ent.SubCategoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SubCategoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SubCategoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SubCategoryMutation", m)
 }
 
 // The UserFunc type is an adapter to allow the use of ordinary

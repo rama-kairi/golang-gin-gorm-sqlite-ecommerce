@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -47,7 +48,12 @@ func (p productController) Get(c *gin.Context) {
 	}
 
 	// Get the product from the database
-	product, err := p.db.Product.Query().Where(product.ID(id)).Only(ctx)
+	product, err := p.db.Product.Query().
+		WithCategory().
+		WithSubCategory().
+		WithUser().
+		Where(product.ID(id)).
+		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			utils.Response(c, http.StatusNotFound, nil, "Product not found")
@@ -73,14 +79,21 @@ func (p productController) Create(c *gin.Context) {
 		SetDescription(productSchema.Description).
 		SetName(productSchema.Name).
 		SetUserID(productSchema.UserID).
+		SetCategoryID(productSchema.CategoryID).
+		SetSubCategoryID(productSchema.SubCategoryID).
 		Save(ctx)
 	if err != nil {
+		log.Println(err)
 		if strings.Contains(err.Error(), "missing required field \"Product.user_id\"") {
 			utils.Response(c, http.StatusBadRequest, nil, "`user_id` Required")
 			return
 		}
-		if ent.IsConstraintError(err) {
-			utils.Response(c, http.StatusBadRequest, nil, "Invalid user_id")
+		if ent.IsConstraintError(err) && strings.Contains(err.Error(), "products_categories_products") {
+			utils.Response(c, http.StatusBadRequest, nil, "Category id is invalid")
+			return
+		}
+		if ent.IsConstraintError(err) && strings.Contains(err.Error(), "subcategory") {
+			utils.Response(c, http.StatusBadRequest, nil, "Category id is invalid")
 			return
 		}
 
@@ -116,6 +129,18 @@ func (p productController) Update(c *gin.Context) {
 	}
 	if productSchema.Price != 0 {
 		productUpdate.SetPrice(productSchema.Price)
+	}
+
+	if productSchema.UserID != uuid.Nil {
+		productUpdate.SetCategoryID(productSchema.CategoryID)
+	}
+
+	if productSchema.CategoryID != uuid.Nil {
+		productUpdate.SetCategoryID(productSchema.CategoryID)
+	}
+
+	if productSchema.SubCategoryID != uuid.Nil {
+		productUpdate.SetSubCategoryID(productSchema.SubCategoryID)
 	}
 
 	productRes, err := productUpdate.Save(ctx)

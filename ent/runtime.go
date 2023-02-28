@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/category"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/product"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/schema"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/subcategory"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 )
 
@@ -15,6 +17,29 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	categoryMixin := schema.Category{}.Mixin()
+	categoryMixinFields0 := categoryMixin[0].Fields()
+	_ = categoryMixinFields0
+	categoryFields := schema.Category{}.Fields()
+	_ = categoryFields
+	// categoryDescCreatedAt is the schema descriptor for created_at field.
+	categoryDescCreatedAt := categoryMixinFields0[1].Descriptor()
+	// category.DefaultCreatedAt holds the default value on creation for the created_at field.
+	category.DefaultCreatedAt = categoryDescCreatedAt.Default.(func() time.Time)
+	// categoryDescUpdatedAt is the schema descriptor for updated_at field.
+	categoryDescUpdatedAt := categoryMixinFields0[2].Descriptor()
+	// category.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	category.DefaultUpdatedAt = categoryDescUpdatedAt.Default.(func() time.Time)
+	// category.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	category.UpdateDefaultUpdatedAt = categoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// categoryDescName is the schema descriptor for name field.
+	categoryDescName := categoryFields[0].Descriptor()
+	// category.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	category.NameValidator = categoryDescName.Validators[0].(func(string) error)
+	// categoryDescID is the schema descriptor for id field.
+	categoryDescID := categoryMixinFields0[0].Descriptor()
+	// category.DefaultID holds the default value on creation for the id field.
+	category.DefaultID = categoryDescID.Default.(func() uuid.UUID)
 	productMixin := schema.Product{}.Mixin()
 	productMixinFields0 := productMixin[0].Fields()
 	_ = productMixinFields0
@@ -42,6 +67,29 @@ func init() {
 	productDescID := productMixinFields0[0].Descriptor()
 	// product.DefaultID holds the default value on creation for the id field.
 	product.DefaultID = productDescID.Default.(func() uuid.UUID)
+	subcategoryMixin := schema.SubCategory{}.Mixin()
+	subcategoryMixinFields0 := subcategoryMixin[0].Fields()
+	_ = subcategoryMixinFields0
+	subcategoryFields := schema.SubCategory{}.Fields()
+	_ = subcategoryFields
+	// subcategoryDescCreatedAt is the schema descriptor for created_at field.
+	subcategoryDescCreatedAt := subcategoryMixinFields0[1].Descriptor()
+	// subcategory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	subcategory.DefaultCreatedAt = subcategoryDescCreatedAt.Default.(func() time.Time)
+	// subcategoryDescUpdatedAt is the schema descriptor for updated_at field.
+	subcategoryDescUpdatedAt := subcategoryMixinFields0[2].Descriptor()
+	// subcategory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	subcategory.DefaultUpdatedAt = subcategoryDescUpdatedAt.Default.(func() time.Time)
+	// subcategory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	subcategory.UpdateDefaultUpdatedAt = subcategoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// subcategoryDescName is the schema descriptor for name field.
+	subcategoryDescName := subcategoryFields[0].Descriptor()
+	// subcategory.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	subcategory.NameValidator = subcategoryDescName.Validators[0].(func(string) error)
+	// subcategoryDescID is the schema descriptor for id field.
+	subcategoryDescID := subcategoryMixinFields0[0].Descriptor()
+	// subcategory.DefaultID holds the default value on creation for the id field.
+	subcategory.DefaultID = subcategoryDescID.Default.(func() uuid.UUID)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0

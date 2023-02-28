@@ -9,7 +9,9 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/category"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/product"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/subcategory"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 )
 
@@ -32,6 +34,10 @@ type Product struct {
 	Price int `json:"price,omitempty"`
 	// UserID holds the value of the "user_id" field.
 	UserID uuid.UUID `json:"user_id,omitempty"`
+	// CategoryID holds the value of the "category_id" field.
+	CategoryID uuid.UUID `json:"category_id,omitempty"`
+	// SubCategoryID holds the value of the "sub_category_id" field.
+	SubCategoryID uuid.UUID `json:"sub_category_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProductQuery when eager-loading is set.
 	Edges ProductEdges `json:"edges"`
@@ -41,9 +47,13 @@ type Product struct {
 type ProductEdges struct {
 	// User holds the value of the user edge.
 	User *User `json:"user,omitempty"`
+	// Category holds the value of the category edge.
+	Category *Category `json:"category,omitempty"`
+	// SubCategory holds the value of the sub_category edge.
+	SubCategory *SubCategory `json:"sub_category,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -59,6 +69,32 @@ func (e ProductEdges) UserOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "user"}
 }
 
+// CategoryOrErr returns the Category value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProductEdges) CategoryOrErr() (*Category, error) {
+	if e.loadedTypes[1] {
+		if e.Category == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: category.Label}
+		}
+		return e.Category, nil
+	}
+	return nil, &NotLoadedError{edge: "category"}
+}
+
+// SubCategoryOrErr returns the SubCategory value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProductEdges) SubCategoryOrErr() (*SubCategory, error) {
+	if e.loadedTypes[2] {
+		if e.SubCategory == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: subcategory.Label}
+		}
+		return e.SubCategory, nil
+	}
+	return nil, &NotLoadedError{edge: "sub_category"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Product) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -70,7 +106,7 @@ func (*Product) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case product.FieldCreatedAt, product.FieldUpdatedAt, product.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
-		case product.FieldID, product.FieldUserID:
+		case product.FieldID, product.FieldUserID, product.FieldCategoryID, product.FieldSubCategoryID:
 			values[i] = new(uuid.UUID)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Product", columns[i])
@@ -136,6 +172,18 @@ func (pr *Product) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				pr.UserID = *value
 			}
+		case product.FieldCategoryID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field category_id", values[i])
+			} else if value != nil {
+				pr.CategoryID = *value
+			}
+		case product.FieldSubCategoryID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field sub_category_id", values[i])
+			} else if value != nil {
+				pr.SubCategoryID = *value
+			}
 		}
 	}
 	return nil
@@ -144,6 +192,16 @@ func (pr *Product) assignValues(columns []string, values []any) error {
 // QueryUser queries the "user" edge of the Product entity.
 func (pr *Product) QueryUser() *UserQuery {
 	return NewProductClient(pr.config).QueryUser(pr)
+}
+
+// QueryCategory queries the "category" edge of the Product entity.
+func (pr *Product) QueryCategory() *CategoryQuery {
+	return NewProductClient(pr.config).QueryCategory(pr)
+}
+
+// QuerySubCategory queries the "sub_category" edge of the Product entity.
+func (pr *Product) QuerySubCategory() *SubCategoryQuery {
+	return NewProductClient(pr.config).QuerySubCategory(pr)
 }
 
 // Update returns a builder for updating this Product.
@@ -191,6 +249,12 @@ func (pr *Product) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("user_id=")
 	builder.WriteString(fmt.Sprintf("%v", pr.UserID))
+	builder.WriteString(", ")
+	builder.WriteString("category_id=")
+	builder.WriteString(fmt.Sprintf("%v", pr.CategoryID))
+	builder.WriteString(", ")
+	builder.WriteString("sub_category_id=")
+	builder.WriteString(fmt.Sprintf("%v", pr.SubCategoryID))
 	builder.WriteByte(')')
 	return builder.String()
 }

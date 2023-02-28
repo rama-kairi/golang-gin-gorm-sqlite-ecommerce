@@ -11,7 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/category"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/product"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/subcategory"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 )
 
@@ -96,6 +98,18 @@ func (pc *ProductCreate) SetUserID(u uuid.UUID) *ProductCreate {
 	return pc
 }
 
+// SetCategoryID sets the "category_id" field.
+func (pc *ProductCreate) SetCategoryID(u uuid.UUID) *ProductCreate {
+	pc.mutation.SetCategoryID(u)
+	return pc
+}
+
+// SetSubCategoryID sets the "sub_category_id" field.
+func (pc *ProductCreate) SetSubCategoryID(u uuid.UUID) *ProductCreate {
+	pc.mutation.SetSubCategoryID(u)
+	return pc
+}
+
 // SetID sets the "id" field.
 func (pc *ProductCreate) SetID(u uuid.UUID) *ProductCreate {
 	pc.mutation.SetID(u)
@@ -113,6 +127,16 @@ func (pc *ProductCreate) SetNillableID(u *uuid.UUID) *ProductCreate {
 // SetUser sets the "user" edge to the User entity.
 func (pc *ProductCreate) SetUser(u *User) *ProductCreate {
 	return pc.SetUserID(u.ID)
+}
+
+// SetCategory sets the "category" edge to the Category entity.
+func (pc *ProductCreate) SetCategory(c *Category) *ProductCreate {
+	return pc.SetCategoryID(c.ID)
+}
+
+// SetSubCategory sets the "sub_category" edge to the SubCategory entity.
+func (pc *ProductCreate) SetSubCategory(s *SubCategory) *ProductCreate {
+	return pc.SetSubCategoryID(s.ID)
 }
 
 // Mutation returns the ProductMutation object of the builder.
@@ -191,8 +215,20 @@ func (pc *ProductCreate) check() error {
 	if _, ok := pc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Product.user_id"`)}
 	}
+	if _, ok := pc.mutation.CategoryID(); !ok {
+		return &ValidationError{Name: "category_id", err: errors.New(`ent: missing required field "Product.category_id"`)}
+	}
+	if _, ok := pc.mutation.SubCategoryID(); !ok {
+		return &ValidationError{Name: "sub_category_id", err: errors.New(`ent: missing required field "Product.sub_category_id"`)}
+	}
 	if _, ok := pc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "Product.user"`)}
+	}
+	if _, ok := pc.mutation.CategoryID(); !ok {
+		return &ValidationError{Name: "category", err: errors.New(`ent: missing required edge "Product.category"`)}
+	}
+	if _, ok := pc.mutation.SubCategoryID(); !ok {
+		return &ValidationError{Name: "sub_category", err: errors.New(`ent: missing required edge "Product.sub_category"`)}
 	}
 	return nil
 }
@@ -277,6 +313,46 @@ func (pc *ProductCreate) createSpec() (*Product, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.CategoryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.CategoryTable,
+			Columns: []string{product.CategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: category.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CategoryID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.SubCategoryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.SubCategoryTable,
+			Columns: []string{product.SubCategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: subcategory.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.SubCategoryID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

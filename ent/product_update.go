@@ -12,8 +12,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/category"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/predicate"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/product"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/subcategory"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
 )
 
@@ -101,9 +103,31 @@ func (pu *ProductUpdate) SetUserID(u uuid.UUID) *ProductUpdate {
 	return pu
 }
 
+// SetCategoryID sets the "category_id" field.
+func (pu *ProductUpdate) SetCategoryID(u uuid.UUID) *ProductUpdate {
+	pu.mutation.SetCategoryID(u)
+	return pu
+}
+
+// SetSubCategoryID sets the "sub_category_id" field.
+func (pu *ProductUpdate) SetSubCategoryID(u uuid.UUID) *ProductUpdate {
+	pu.mutation.SetSubCategoryID(u)
+	return pu
+}
+
 // SetUser sets the "user" edge to the User entity.
 func (pu *ProductUpdate) SetUser(u *User) *ProductUpdate {
 	return pu.SetUserID(u.ID)
+}
+
+// SetCategory sets the "category" edge to the Category entity.
+func (pu *ProductUpdate) SetCategory(c *Category) *ProductUpdate {
+	return pu.SetCategoryID(c.ID)
+}
+
+// SetSubCategory sets the "sub_category" edge to the SubCategory entity.
+func (pu *ProductUpdate) SetSubCategory(s *SubCategory) *ProductUpdate {
+	return pu.SetSubCategoryID(s.ID)
 }
 
 // Mutation returns the ProductMutation object of the builder.
@@ -114,6 +138,18 @@ func (pu *ProductUpdate) Mutation() *ProductMutation {
 // ClearUser clears the "user" edge to the User entity.
 func (pu *ProductUpdate) ClearUser() *ProductUpdate {
 	pu.mutation.ClearUser()
+	return pu
+}
+
+// ClearCategory clears the "category" edge to the Category entity.
+func (pu *ProductUpdate) ClearCategory() *ProductUpdate {
+	pu.mutation.ClearCategory()
+	return pu
+}
+
+// ClearSubCategory clears the "sub_category" edge to the SubCategory entity.
+func (pu *ProductUpdate) ClearSubCategory() *ProductUpdate {
+	pu.mutation.ClearSubCategory()
 	return pu
 }
 
@@ -167,6 +203,12 @@ func (pu *ProductUpdate) check() error {
 	}
 	if _, ok := pu.mutation.UserID(); pu.mutation.UserCleared() && !ok {
 		return errors.New(`ent: clearing a required unique edge "Product.user"`)
+	}
+	if _, ok := pu.mutation.CategoryID(); pu.mutation.CategoryCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Product.category"`)
+	}
+	if _, ok := pu.mutation.SubCategoryID(); pu.mutation.SubCategoryCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Product.sub_category"`)
 	}
 	return nil
 }
@@ -243,6 +285,76 @@ func (pu *ProductUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pu.mutation.CategoryCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.CategoryTable,
+			Columns: []string{product.CategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: category.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.CategoryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.CategoryTable,
+			Columns: []string{product.CategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: category.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pu.mutation.SubCategoryCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.SubCategoryTable,
+			Columns: []string{product.SubCategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: subcategory.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.SubCategoryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.SubCategoryTable,
+			Columns: []string{product.SubCategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: subcategory.FieldID,
 				},
 			},
 		}
@@ -342,9 +454,31 @@ func (puo *ProductUpdateOne) SetUserID(u uuid.UUID) *ProductUpdateOne {
 	return puo
 }
 
+// SetCategoryID sets the "category_id" field.
+func (puo *ProductUpdateOne) SetCategoryID(u uuid.UUID) *ProductUpdateOne {
+	puo.mutation.SetCategoryID(u)
+	return puo
+}
+
+// SetSubCategoryID sets the "sub_category_id" field.
+func (puo *ProductUpdateOne) SetSubCategoryID(u uuid.UUID) *ProductUpdateOne {
+	puo.mutation.SetSubCategoryID(u)
+	return puo
+}
+
 // SetUser sets the "user" edge to the User entity.
 func (puo *ProductUpdateOne) SetUser(u *User) *ProductUpdateOne {
 	return puo.SetUserID(u.ID)
+}
+
+// SetCategory sets the "category" edge to the Category entity.
+func (puo *ProductUpdateOne) SetCategory(c *Category) *ProductUpdateOne {
+	return puo.SetCategoryID(c.ID)
+}
+
+// SetSubCategory sets the "sub_category" edge to the SubCategory entity.
+func (puo *ProductUpdateOne) SetSubCategory(s *SubCategory) *ProductUpdateOne {
+	return puo.SetSubCategoryID(s.ID)
 }
 
 // Mutation returns the ProductMutation object of the builder.
@@ -355,6 +489,18 @@ func (puo *ProductUpdateOne) Mutation() *ProductMutation {
 // ClearUser clears the "user" edge to the User entity.
 func (puo *ProductUpdateOne) ClearUser() *ProductUpdateOne {
 	puo.mutation.ClearUser()
+	return puo
+}
+
+// ClearCategory clears the "category" edge to the Category entity.
+func (puo *ProductUpdateOne) ClearCategory() *ProductUpdateOne {
+	puo.mutation.ClearCategory()
+	return puo
+}
+
+// ClearSubCategory clears the "sub_category" edge to the SubCategory entity.
+func (puo *ProductUpdateOne) ClearSubCategory() *ProductUpdateOne {
+	puo.mutation.ClearSubCategory()
 	return puo
 }
 
@@ -415,6 +561,12 @@ func (puo *ProductUpdateOne) check() error {
 	}
 	if _, ok := puo.mutation.UserID(); puo.mutation.UserCleared() && !ok {
 		return errors.New(`ent: clearing a required unique edge "Product.user"`)
+	}
+	if _, ok := puo.mutation.CategoryID(); puo.mutation.CategoryCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Product.category"`)
+	}
+	if _, ok := puo.mutation.SubCategoryID(); puo.mutation.SubCategoryCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Product.sub_category"`)
 	}
 	return nil
 }
@@ -508,6 +660,76 @@ func (puo *ProductUpdateOne) sqlSave(ctx context.Context) (_node *Product, err e
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.CategoryCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.CategoryTable,
+			Columns: []string{product.CategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: category.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.CategoryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.CategoryTable,
+			Columns: []string{product.CategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: category.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.SubCategoryCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.SubCategoryTable,
+			Columns: []string{product.SubCategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: subcategory.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.SubCategoryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   product.SubCategoryTable,
+			Columns: []string{product.SubCategoryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: subcategory.FieldID,
 				},
 			},
 		}

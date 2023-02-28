@@ -91,6 +91,16 @@ func UserID(v uuid.UUID) predicate.Product {
 	return predicate.Product(sql.FieldEQ(FieldUserID, v))
 }
 
+// CategoryID applies equality check predicate on the "category_id" field. It's identical to CategoryIDEQ.
+func CategoryID(v uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldEQ(FieldCategoryID, v))
+}
+
+// SubCategoryID applies equality check predicate on the "sub_category_id" field. It's identical to SubCategoryIDEQ.
+func SubCategoryID(v uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldEQ(FieldSubCategoryID, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Product {
 	return predicate.Product(sql.FieldEQ(FieldCreatedAt, v))
@@ -421,6 +431,46 @@ func UserIDNotIn(vs ...uuid.UUID) predicate.Product {
 	return predicate.Product(sql.FieldNotIn(FieldUserID, vs...))
 }
 
+// CategoryIDEQ applies the EQ predicate on the "category_id" field.
+func CategoryIDEQ(v uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldEQ(FieldCategoryID, v))
+}
+
+// CategoryIDNEQ applies the NEQ predicate on the "category_id" field.
+func CategoryIDNEQ(v uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldNEQ(FieldCategoryID, v))
+}
+
+// CategoryIDIn applies the In predicate on the "category_id" field.
+func CategoryIDIn(vs ...uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldIn(FieldCategoryID, vs...))
+}
+
+// CategoryIDNotIn applies the NotIn predicate on the "category_id" field.
+func CategoryIDNotIn(vs ...uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldNotIn(FieldCategoryID, vs...))
+}
+
+// SubCategoryIDEQ applies the EQ predicate on the "sub_category_id" field.
+func SubCategoryIDEQ(v uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldEQ(FieldSubCategoryID, v))
+}
+
+// SubCategoryIDNEQ applies the NEQ predicate on the "sub_category_id" field.
+func SubCategoryIDNEQ(v uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldNEQ(FieldSubCategoryID, v))
+}
+
+// SubCategoryIDIn applies the In predicate on the "sub_category_id" field.
+func SubCategoryIDIn(vs ...uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldIn(FieldSubCategoryID, vs...))
+}
+
+// SubCategoryIDNotIn applies the NotIn predicate on the "sub_category_id" field.
+func SubCategoryIDNotIn(vs ...uuid.UUID) predicate.Product {
+	return predicate.Product(sql.FieldNotIn(FieldSubCategoryID, vs...))
+}
+
 // HasUser applies the HasEdge predicate on the "user" edge.
 func HasUser() predicate.Product {
 	return predicate.Product(func(s *sql.Selector) {
@@ -439,6 +489,60 @@ func HasUserWith(preds ...predicate.User) predicate.Product {
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(UserInverseTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCategory applies the HasEdge predicate on the "category" edge.
+func HasCategory() predicate.Product {
+	return predicate.Product(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CategoryTable, CategoryColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCategoryWith applies the HasEdge predicate on the "category" edge with a given conditions (other predicates).
+func HasCategoryWith(preds ...predicate.Category) predicate.Product {
+	return predicate.Product(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(CategoryInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CategoryTable, CategoryColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasSubCategory applies the HasEdge predicate on the "sub_category" edge.
+func HasSubCategory() predicate.Product {
+	return predicate.Product(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, SubCategoryTable, SubCategoryColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSubCategoryWith applies the HasEdge predicate on the "sub_category" edge with a given conditions (other predicates).
+func HasSubCategoryWith(preds ...predicate.SubCategory) predicate.Product {
+	return predicate.Product(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(SubCategoryInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, SubCategoryTable, SubCategoryColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
