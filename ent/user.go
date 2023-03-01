@@ -30,7 +30,7 @@ type User struct {
 	// Email holds the value of the "email" field.
 	Email string `json:"email,omitempty"`
 	// Password holds the value of the "password" field.
-	Password string `json:"password,omitempty"`
+	Password string `json:"-"`
 	// Age holds the value of the "age" field.
 	Age int `json:"age,omitempty"`
 	// Address holds the value of the "address" field.

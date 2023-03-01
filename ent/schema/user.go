@@ -23,7 +23,7 @@ func (User) Fields() []ent.Field {
 		field.String("first_name").NotEmpty(),
 		field.String("last_name").NotEmpty(),
 		field.String("email").Unique().NotEmpty(),
-		field.String("password").NotEmpty(),
+		field.String("password").NotEmpty().StructTag(`json:"-"`),
 		field.Int("age").Optional(),
 		field.String("address").Optional(),
 		field.Bool("is_active").Default(false),

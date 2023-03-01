@@ -3,13 +3,11 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/rama-kairi/blog-api-golang-gin/controllers"
-	"github.com/rama-kairi/blog-api-golang-gin/db"
+	"github.com/rama-kairi/blog-api-golang-gin/ent"
 )
 
-func authRoutes(e *gin.Engine) {
-	entClient := db.InitEntDb()
-	authApi := controllers.NewAuthController(entClient)
-
+func authRoutes(e *gin.Engine, client *ent.Client) {
+	authApi := controllers.NewAuthController(client)
 	auth := e.Group("/auth")
 	{
 		auth.POST("/signup", authApi.Signup)

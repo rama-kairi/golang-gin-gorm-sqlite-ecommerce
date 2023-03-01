@@ -10,9 +10,11 @@ import (
 func main() {
 	config.InitViperConfig()
 
-	db.InitEntDb()
+	// Initialize the Ent ORM
+	entClient := db.InitEntDb()
+	defer entClient.Close() // Close the Ent ORM
 
-	r := routes.InitRoutes()
+	r := routes.InitRoutes(entClient)
 
 	r.Run(":" + viper.GetString("APP_PORT"))
 }

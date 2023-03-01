@@ -26,7 +26,9 @@ type TokenClaims struct {
 }
 
 // GenerateJWTToken - generates a JWT token
-func GenerateJWTToken(email string, tokenType schema.TokenType) (schema.SingleTokenResponse, error) {
+func GenerateJWTToken(
+	uuid string, tokenType schema.TokenType,
+) (schema.SingleTokenResponse, error) {
 	// Create the Claims
 	claims := &TokenClaims{
 		Type: string(tokenType),
@@ -34,7 +36,7 @@ func GenerateJWTToken(email string, tokenType schema.TokenType) (schema.SingleTo
 			Issuer:    "blog-api-golang-gin",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(expireMap[tokenType]),
-			Subject:   email,
+			Subject:   uuid,
 		},
 	}
 
@@ -52,7 +54,7 @@ func GenerateJWTToken(email string, tokenType schema.TokenType) (schema.SingleTo
 }
 
 // VerifyJWTToken - verifies a JWT token
-func VerifyJWTToken(tokenString string) (string, string, error) {
+func VerifyJWTToken(tokenString string, tokenType schema.TokenType) (tokenStr string, err error) {
 	token, err := jwt.Parse(tokenString,
 		func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -62,15 +64,19 @@ func VerifyJWTToken(tokenString string) (string, string, error) {
 		},
 	)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok && !token.Valid {
-		return "", "", fmt.Errorf("invalid token")
+		return "", fmt.Errorf("invalid token")
 	}
 
-	return claims["sub"].(string), claims["type"].(string), nil
+	if CheckTokenType(claims["type"].(string), tokenType) != nil {
+		return "", fmt.Errorf("invalid token type")
+	}
+
+	return claims["sub"].(string), nil
 }
 
 // ParseToken - parses a JWT token from Gin context

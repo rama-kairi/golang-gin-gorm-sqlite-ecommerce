@@ -28,7 +28,12 @@ func NewProductController(db *ent.Client) *productController {
 func (p productController) GetAll(c *gin.Context) {
 	ctx := context.Background()
 
-	productRes, err := p.db.Product.Query().WithUser().All(ctx)
+	productRes, err := p.db.Product.
+		Query().
+		WithUser().
+		WithCategory().
+		WithSubCategory().
+		All(ctx)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error getting products")
 		return
@@ -68,6 +73,10 @@ func (p productController) Get(c *gin.Context) {
 // Create a product
 func (p productController) Create(c *gin.Context) {
 	ctx := context.Background()
+
+	// Get the user from the context
+	user := c.MustGet("user").(*ent.User)
+
 	var productSchema ent.Product
 	if err := c.ShouldBindJSON(&productSchema); err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error Binding product schema")
@@ -78,7 +87,7 @@ func (p productController) Create(c *gin.Context) {
 		SetPrice(productSchema.Price).
 		SetDescription(productSchema.Description).
 		SetName(productSchema.Name).
-		SetUserID(productSchema.UserID).
+		SetUserID(user.ID).
 		SetCategoryID(productSchema.CategoryID).
 		SetSubCategoryID(productSchema.SubCategoryID).
 		Save(ctx)

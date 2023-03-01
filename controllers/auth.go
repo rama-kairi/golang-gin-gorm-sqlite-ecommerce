@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rama-kairi/blog-api-golang-gin/ent"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
-	"github.com/rama-kairi/blog-api-golang-gin/models"
 	"github.com/rama-kairi/blog-api-golang-gin/schema"
 	"github.com/rama-kairi/blog-api-golang-gin/utils"
 	"golang.org/x/crypto/bcrypt"
@@ -64,7 +64,7 @@ func (ac authController) Signup(c *gin.Context) {
 	}
 
 	// Generate a verification token
-	token, err := utils.GenerateJWTToken(userModel.Email, schema.TokenTypeVerify)
+	token, err := utils.GenerateJWTToken(userModel.ID.String(), schema.TokenTypeVerify)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
 		return
@@ -106,12 +106,12 @@ func (ac authController) Login(c *gin.Context) {
 	}
 
 	// Generate a Basic Auth token
-	accessToken, err := utils.GenerateJWTToken(userModel.Email, schema.TokenTypeAccess)
+	accessToken, err := utils.GenerateJWTToken(userModel.ID.String(), schema.TokenTypeAccess)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
 		return
 	}
-	refreshToken, err := utils.GenerateJWTToken(userModel.Email, schema.TokenTypeRefresh)
+	refreshToken, err := utils.GenerateJWTToken(userModel.ID.String(), schema.TokenTypeRefresh)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
 		return
@@ -132,42 +132,40 @@ func (ac authController) Verify(c *gin.Context) {
 	token := c.Param("token")
 
 	// Verify the token
-	email, tokenType, err := utils.VerifyJWTToken(token)
+	uuidStr, err := utils.VerifyJWTToken(token, schema.TokenTypeVerify)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid Token")
 		return
 	}
 
-	// Check if the token is of type verification
-	if err := utils.CheckTokenType(tokenType, schema.TokenTypeVerify); err != nil {
-		utils.Response(c, http.StatusUnauthorized, nil, err.Error())
+	// parse uuidStr to uuid.UUID
+	uuid, err := uuid.Parse(uuidStr)
+	if err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Invalid Token")
 		return
 	}
 
-	// Declare a user model
-	var userModel models.User
-
 	// Check if the user already exists
-	userIns, err := ac.db.User.Query().Where(user.Email(email)).Only(c)
+	userIns, err := ac.db.User.Query().Where(user.ID(uuid)).Only(c)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid Token")
 		return
 	}
 
 	// Check if the user is already verified
-	if userModel.IsActive {
+	if userIns.IsActive {
 		utils.Response(c, http.StatusConflict, nil, "User is already verified")
 		return
 	}
 
 	// Activate the user
-	userModel.IsActive = true
+	userIns.IsActive = true
 	if err := ac.db.User.UpdateOneID(userIns.ID).SetIsActive(true).Exec(c); err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error activating user")
 		return
 	}
 
-	utils.Response(c, http.StatusOK, userModel, "User activated successfully")
+	utils.Response(c, http.StatusOK, userIns, "User activated successfully")
 }
 
 // Forgot Password
@@ -189,7 +187,7 @@ func (ac authController) ForgotPassword(c *gin.Context) {
 	}
 
 	// Generate a Basic Auth token
-	resetToken, err := utils.GenerateJWTToken(userModel.Email, schema.TokenTypeReset)
+	resetToken, err := utils.GenerateJWTToken(userModel.ID.String(), schema.TokenTypeReset)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
 		return
@@ -217,20 +215,21 @@ func (ac authController) ResetPassword(c *gin.Context) {
 	}
 
 	// Decode the token
-	email, tokenType, err := utils.VerifyJWTToken(token)
+	uuidStr, err := utils.VerifyJWTToken(token, schema.TokenTypeReset)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
 	}
 
-	// Check if the token is a Reset token
-	if err := utils.CheckTokenType(tokenType, schema.TokenTypeReset); err != nil {
+	// Parse uuidStr to uuid.UUID
+	uuid, err := uuid.Parse(uuidStr)
+	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
 	}
 
 	// Declare a user model
-	userModel, err := ac.db.User.Query().Where(user.Email(email)).Only(c)
+	userModel, err := ac.db.User.Query().Where(user.ID(uuid)).Only(c)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
@@ -269,18 +268,9 @@ func (ac authController) ChangePassword(c *gin.Context) {
 	}
 
 	// get the email from the token
-	email, tokenType, err := utils.VerifyJWTToken(token)
+	uuidStr, err := utils.VerifyJWTToken(token, schema.TokenTypeAccess)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
-		log.Println(err)
-		c.Abort()
-		return
-	}
-
-	// Check if the token is a Access token
-	if err := utils.CheckTokenType(tokenType, schema.TokenTypeAccess); err != nil {
-		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
-		log.Println(err)
 		return
 	}
 
@@ -291,8 +281,15 @@ func (ac authController) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	// Parse the uuidStr to uuid.UUID
+	uuid, err := uuid.Parse(uuidStr)
+	if err != nil {
+		utils.Response(c, http.StatusUnauthorized, nil, "Invalid token")
+		return
+	}
+
 	// Check if the old password is correct
-	user, err := ac.db.User.Query().Where(user.Email(email)).Only(c)
+	user, err := ac.db.User.Query().Where(user.ID(uuid)).Only(c)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
@@ -336,7 +333,7 @@ func (ac authController) RefreshToken(c *gin.Context) {
 	}
 
 	// get the email from the token
-	email, tokenType, err := utils.VerifyJWTToken(token)
+	uuidStr, err := utils.VerifyJWTToken(token, schema.TokenTypeRefresh)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
 		log.Println(err)
@@ -344,22 +341,22 @@ func (ac authController) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Check if the token is a Refresh token
-	if err := utils.CheckTokenType(tokenType, schema.TokenTypeRefresh); err != nil {
+	// Parse the uuidStr to uuid
+	uuid, err := uuid.Parse(uuidStr)
+	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
-		log.Println(err)
 		return
 	}
 
 	// Check if the user exists
-	user, err := ac.db.User.Query().Where(user.Email(email)).Only(c)
+	user, err := ac.db.User.Query().Where(user.ID(uuid)).Only(c)
 	if err != nil {
 		utils.Response(c, http.StatusUnauthorized, nil, "Invalid token")
 		return
 	}
 
 	// Generate a new access token
-	accessToken, err := utils.GenerateJWTToken(user.Email, schema.TokenTypeAccess)
+	accessToken, err := utils.GenerateJWTToken(user.ID.String(), schema.TokenTypeAccess)
 	if err != nil {
 		utils.Response(c, http.StatusInternalServerError, nil, "Error generating token")
 		return

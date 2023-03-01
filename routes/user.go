@@ -3,12 +3,11 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/rama-kairi/blog-api-golang-gin/controllers"
-	"github.com/rama-kairi/blog-api-golang-gin/db"
+	"github.com/rama-kairi/blog-api-golang-gin/ent"
 )
 
-func userRoutes(e *gin.Engine) {
-	entClient := db.InitEntDb()
-	userApi := controllers.NewUserController(entClient)
+func userRoutes(e *gin.Engine, client *ent.Client) {
+	userApi := controllers.NewUserController(client)
 
 	userGroup := e.Group("/user")
 	{

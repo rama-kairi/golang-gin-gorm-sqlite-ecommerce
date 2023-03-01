@@ -1,48 +1,58 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rama-kairi/blog-api-golang-gin/db"
-	"github.com/rama-kairi/blog-api-golang-gin/models"
+	"github.com/google/uuid"
+	"github.com/rama-kairi/blog-api-golang-gin/ent"
+	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
+	"github.com/rama-kairi/blog-api-golang-gin/schema"
 	"github.com/rama-kairi/blog-api-golang-gin/utils"
 )
 
 // AuthMiddleware is a middleware that checks if the user is authenticated
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the token from the header
 		token, err := utils.ParseToken(c)
 		if err != nil {
-			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token 1")
 			c.Abort()
 			return
 		}
 
 		// get the email from the token
-		email, tokenType, err := utils.VerifyJWTToken(token)
+		uuidStr, err := utils.VerifyJWTToken(token, schema.TokenTypeAccess)
 		if err != nil {
-			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token 2")
 			c.Abort()
 			return
 		}
 
-		// Check if the token is an access token
-		if tokenType != "access" {
-			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+		// Parse uuidStr to uuid.UUID
+		log.Println(uuidStr)
+		uuid, err := uuid.Parse(uuidStr)
+		log.Println(err)
+		if err != nil {
+			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token 3")
 			c.Abort()
 			return
 		}
 
 		// Get the user from the database
-		var user models.User
-		if err := db.Db.Where("email = ?", email).First(&user).Error; err != nil {
-			// If the user is not found, return 404
-			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token")
+		userRes, err := client.User.
+			Query().
+			Where(user.ID(uuid)).Only(c)
+		if err != nil {
+			utils.Response(c, http.StatusUnauthorized, nil, "Unauthorized, Invalid token 4")
 			c.Abort()
 			return
 		}
+
+		// Set the user in the context
+		c.Set("user", userRes)
 
 		c.Next()
 	}

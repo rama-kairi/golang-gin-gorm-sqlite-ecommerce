@@ -10,7 +10,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rama-kairi/blog-api-golang-gin/ent"
 	"github.com/rama-kairi/blog-api-golang-gin/ent/user"
-	"github.com/rama-kairi/blog-api-golang-gin/models"
 	"github.com/rama-kairi/blog-api-golang-gin/utils"
 )
 
@@ -115,7 +114,7 @@ func (u userController) Update(c *gin.Context) {
 		return
 	}
 	// Get the user payload from the request
-	var user models.User
+	var user ent.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		utils.Response(c, http.StatusBadRequest, nil, "Error updating user")
 		return
